@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <title>AI Khazana</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"
+            integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w=="
+            crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    </head>
+
+    <body>
+        <!-- partial:index.partial.html -->
+        <section class="msger">
+            <header class="msger-header">
+                <div class="msger-header-title">
+                    <i class="fa-solid fa-spoon"></i> AI Khazana <i class="fa-solid fa-spoon"></i>
+                </div>
+            </header>
+
+            <main class="msger-chat">
+            </main>
+
+            <form class="msger-inputarea">
+                <!-- <input type="text" class="msger-input" id="textInput" placeholder="Enter your message..."> -->
+                <!-- <button type="submit" class="msger-send-btn">Send</button> -->
+                <button type="submit" class="msger-voice-btn"><i class="fa-solid fa-microphone"></i></button>
+            </form>
+        </section>
+        <!-- partial -->
+        <!-- <script src='https://use.fontawesome.com/releases/v5.0.13/js/all.js'></script> -->
+        <script rc="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/js/all.min.js"
+            integrity="sha512-rpLlll167T5LJHwp0waJCh3ZRf7pO6IT1+LZOhAyP6phAirwchClbTZV3iqL3BMrVxIYRbzGTpli4rfxsCK6Vw=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"
+            integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA=="
+            crossorigin="anonymous"></script>
+        <script type="text/javascript" charset="utf-8">
+            var socket = io();
+            socket.on('connect', function () {
+                console.log('user connected');
+            });
+            socket.on('end_connection', () => {
+                appendMessage(BOT_NAME, BOT_IMG, "left", "Thank you for using our services");
+                $('.msger-voice-btn').removeClass('active')
+            });
+        </script>
+        <script>
+            const msgerChat = get(".msger-chat");
+
+            function get(selector, root = document) {
+                return root.querySelector(selector);
+            }
+
+            function formatDate(date) {
+                const h = "0" + date.getHours();
+                const m = "0" + date.getMinutes();
+
+                return `${h.slice(-2)}:${m.slice(-2)}`;
+            }
+
+            function appendMessage(name, img, side, text) {
+                //   Simple solution for small apps
+                const msgHTML = `
+<div class="msg ${side}-msg">
+  <div class="msg-bubble">
+    <div class="msg-info">
+      <div class="msg-info-name">${name}</div>
+      <div class="msg-info-time">${formatDate(new Date())}</div>
+    </div>
+
+    <div class="msg-text">${text}</div>
+  </div>
+</div>
+`;
+
+                msgerChat.insertAdjacentHTML("beforeend", msgHTML);
+                msgerChat.scrollTop += 500;
+            }
+
+            function handle_recipe_names(message) {
+                let data = message['data']
+                let text = ""
+                data.forEach((entry, index) => text += `<p>${index + 1}. ${entry}</p>`)
+                appendMessage(BOT_NAME, BOT_IMG, "left", text)
+                appendMessage(BOT_NAME, BOT_IMG, "left", "Enter the index for the recipe entry")
+            }
+
+            function handle_multiple_outputs(message) {
+                let data = message['data']
+                let text = ""
+                data.forEach((entry, index) => text += `<p>${index + 1}. ${entry}</p>`)
+                appendMessage(BOT_NAME, BOT_IMG, "left", text)
+            }
+        </script>
+        <script>
+            let recipe_selected = false
+            const msgerForm = get(".msger-inputarea");
+
+            // Icons made by Freepik from www.flaticon.com
+            const BOT_IMG = "https://image.flaticon.com/icons/svg/327/327779.svg";
+            const PERSON_IMG = "https://image.flaticon.com/icons/svg/145/145867.svg";
+            const BOT_NAME = "AI Khazana";
+            const PERSON_NAME = "You";
+
+            appendMessage(BOT_NAME, BOT_IMG, "left", "What are you craving for today?\nElse send 'Goodbye' to exit.");
+
+            socket.on("voice_command_bot_input", msg => {
+                appendMessage(PERSON_NAME, PERSON_IMG, "right", msg);
+            })
+            socket.on("voice_command_bot_response", msg => {
+                appendMessage(BOT_NAME, BOT_IMG, "left", msg);
+            })
+            socket.on("voice_command_bot_response_recipes_multiple", msg => {
+                handle_recipe_names(msg)
+            })
+            socket.on("voice_command_bot_response_output_multiple", msg => {
+                handle_multiple_outputs(msg)
+            })
+            socket.on("voice_command_bot_recipe_selected", msg => {
+                recipe_selected = Boolean(msg)
+            })
+
+            msgerForm.addEventListener("submit", event => {
+                event.preventDefault();
+                $('.msger-voice-btn').addClass('active')
+
+                if (!socket.connected) {
+                    socket = io()
+                }
+                socket.emit('start');
+            });
+        </script>
+
+    </body>
+
+</html>
